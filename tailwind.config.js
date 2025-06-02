@@ -14,5 +14,13 @@ module.exports = {
       },
     },
   },
+  // tailwind.config.js
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+      },
+    },
+},
   plugins: [],
 };

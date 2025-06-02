@@ -1,113 +1,188 @@
-import Image from "next/image";
+"use client"
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus,faMinus } from '@fortawesome/free-solid-svg-icons';
+import Navbar from "@/Components/Navbar";
+import { useState ,useEffect} from "react";
+
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+  const stockinitial=[]
+  const[loadst,setloadst]=useState(stockinitial)
+  const[addst,setaddst]=useState({slug:"",quantity:"",price:""})
+  const[mtrue,setmtrue]=useState(false)
+  const[query,setquery]=useState("")
+  const[drop,setdrop]=useState([])
+
+  useEffect(()=>{
+    getstocks()
+  },[])
+
+   const addproduct= async (e)=>{
+    e.preventDefault()
+    try {
+      const response=await fetch('/api/products',{
+        method:'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body:JSON.stringify(addst)
+      })
+      if(response.ok){
+        setmtrue(true)
+        setTimeout(() => {
+          setmtrue(false)
+        }, 1500);
+        console.log("success")
+      }
+      else {
+        console.log("error adding ")
+      }
+      getstocks()
+      setaddst({slug:"",quantity:"",price:""})
+    } catch (error) {
+      console.error('Error:',error)
+    }
+  }
+  const getstocks=async()=>{
+    const response=await fetch('/api/products',{
+      method:'GET',
+      headers:{
+        'Content-Type': 'application/json',
+      },
+    })
+    const json=await response.json()
+    setloadst(json.productstock)
+  }
+  
+  const handlechange=(e)=>{
+    setaddst({...addst,[e.target.name]:e.target.value})
+  }
+
+  const ondrop = async (e) => {
+    let value=e.target.value
+    setquery(value)
+    if(value.length>=3){
+      const response=await fetch('/api/search?query='+ query)
+      const json=await response.json()
+      setdrop(json.productstock)
+    }
+    else{
+      setdrop([])
+
+    }
+  }
+
+  const stockadddel= async (action,slug,initialquantity) => {
+    let index=loadst.findIndex((item)=>item.slug=slug)
+    let newloadst=JSON.parse(JSON.stringify(loadst))
+    if(action=="plus"){
+      newloadst[index].quantity=parseInt(initialquantity)+1
+    }
+    else{
+      newloadst[index].quantity=parseInt(initialquantity)-1
+    }
+    setloadst(newloadst)
+
+    let indexdrop=drop.findIndex((item)=>item.slug=slug)
+    let newdrop=JSON.parse(JSON.stringify(drop))
+    if(action=='plus'){
+      newdrop[indexdrop].quantity=parseInt(initialquantity)+1
+    }
+    else{
+      newdrop[indexdrop].quantity=parseInt(initialquantity)-1
+    }
+    setdrop(newdrop)
+    try {
+      const response=await fetch('/api/action',{
+        method:'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body:JSON.stringify({action,slug,initialquantity})
+      })
+  }catch (error){
+    console.error('Error:',error)
+  }
+}
+
+  return(
+  <>
+  <Navbar/>
+  {/* display current stock */}
+  <div className="container mx-auto ">
+  <div className="text-center"><span className="text-sm text-teal-500">{mtrue ? "Your stock has been added successfully!!!" : ""}</span></div>
+    <h1 className="text-teal-500 font-semibold mb-2">Search Product</h1>
+    <input type="text"  onChange={ondrop} className="w-4/5 border border-gray-400    mx-2 px-2 py-1 text-sm rounded-md mb-2 "/>
+    <div className="absolute bg-teal-50 border rounded b-2">
+    {drop.map((item)=>{
+      return <div key={item._id} className=" flex justify-between  w-[72vw] text-base  p-2">
+      <div>{item.slug} {item.quantity} availabe for ₹{item.price}</div>
+      <div>
+      <button onClick={() => {stockadddel("plus",item.slug,item.quantity)}} className='bg-white-200 px-0.5 py-0 rounded-md border mx-3 '>
+  <FontAwesomeIcon icon={faPlus} size='sm' className="px-1" />
+  
+</button>
+      {/* <span><FontAwesomeIcon icon={faPlus} size='sm' /></span> */}
+      <span>{item.quantity}</span>
+      {/* <span><FontAwesomeIcon icon={faMinus} size='sm' /></span> */}
+      <button onClick={() => {stockadddel("minus",item.slug,item.quantity)}} className='bg-white-200 px-0.5 py-0 rounded-md border  mx-3 '>
+  <FontAwesomeIcon icon={faMinus} size='sm' className="px-1" />
+
+</button>
+
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
       </div>
+    })}
+    </div>
+  <div className="mb-2 my-3">
+    <h1 className=" font-semibold text-teal-500">Add a Product</h1>
+  </div>
+  <form className="">
+    <div className="mb-4">
+      <label htmlFor="Productname" className="block mb-2 text-slate-500">Product slug</label>
+      <input value={addst.slug} onChange={handlechange} name="slug" type="text" id="slug" className="w-4/5 border border-gray-400   mx-2 px-2 py-1 text-sm rounded-md "/>
+    </div>
+    <div className="mb-4">
+      <label htmlFor="stock" className="block mb-2 text-slate-500">quantity</label>
+      <input value={addst.quantity} onChange={handlechange} name="quantity" type="text" id="quantity" className="w-4/5 border border-gray-400 mx-2 px-2 py-1 text-sm rounded-md "/>
+    </div>
+    <div className="mb-4">
+      <label htmlFor="price" className="block mb-2 text-slate-500">Price</label>
+      <input value={addst.price} onChange={handlechange} name="price" type="text" id="price" className="w-4/5 border border-gray-400 mx-2 px-2 py-1 text-sm rounded-md "/>
+    </div>
+    <button onClick={addproduct} type="submit" className=" text-sm text-white bg-teal-500 hover:text-base   border  border-teal-500 rounded-md px-2 py-1" >save</button>
+  </form>
+  <div className="my-4">
+    <h1 className="font-semibold text-teal-500">Display Current Stock</h1>
+    </div>
+  <section className="text-gray-600 body-font my-4">
+  <div className="">
+    <div className=" overflow-auto">
+      <table className="table-auto w-full text-left whitespace-no-wrap ">
+        <thead> 
+          <tr className="">
+            <th className="  px-4 py-3 title-font tracking-wider font-medium text-gray-900 text-sm bg-gray-100 rounded-tl rounded-bl">Product Slug</th>
+            <th className="px-4 py-3 title-font tracking-wider font-medium text-gray-900 text-sm bg-gray-100">Stock</th>
+            <th className="px-4 py-3 title-font tracking-wider font-medium text-gray-900 text-sm bg-gray-100">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+        {Array.isArray(loadst) && loadst.map((item)=>{
+       return  <tr key={item._id} className="  border-gray-200">
+            <td  className=" border px-4 py-3 ">{item.slug}</td>
+            <td className="border px-4 py-3">{item.quantity}</td>
+            <td className="border px-4 py-3">₹ {item.price}</td>
+          </tr>
+})}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</div>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+  </>
+  )
+  
 }
